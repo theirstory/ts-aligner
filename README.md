@@ -99,16 +99,16 @@ const correctedText = "Hello world";
 const aligned = alignTranscripts(machineTranscript, correctedText);
 
 console.log(aligned);
-// {
-//   "words": [
-//     {"start": 1.0, "end": 1.5, "text": "Hello"},
-//     {"start": 1.5, "end": 2.0, "text": "world"}  // timing preserved, text corrected
-//   ],
-//   "paragraphs": [
-//     {"start": 1.0, "end": 2.0}
-//   ],
-//   "transcript": "Hello world"
-// }
+{
+  "words": [
+    {"start": 1.0, "end": 1.5, "text": "Hello"},
+    {"start": 1.5, "end": 2.0, "text": "world"}  
+  ],
+  "paragraphs": [
+    {"start": 1.0, "end": 2.0}
+  ],
+  "transcript": "Hello world"
+}
 ```
 
 ## How It Works
