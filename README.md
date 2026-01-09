@@ -98,7 +98,8 @@ const correctedText = "Hello world";
 // Align them
 const aligned = alignTranscripts(machineTranscript, correctedText);
 
->> console.log(aligned);
+console.log(aligned);
+
 >> {
 >>   "words": [
 >>     {"start": 1.0, "end": 1.5, "text": "Hello"},
