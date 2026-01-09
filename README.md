@@ -86,7 +86,7 @@ const { alignTranscripts } = require('./alignment.js');
 const machineTranscript = {
   "words": [
     {"start": 1.0, "end": 1.5, "text": "Hello"},
-    {"start": 1.5, "end": 2.0, "text": "wrold"}  // typo
+    {"start": 1.5, "end": 2.0, "text": "word"}  // incorrect
   ],
   "paragraphs": [
     {"start": 1.0, "end": 2.0}
