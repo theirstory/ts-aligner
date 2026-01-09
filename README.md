@@ -1,7 +1,6 @@
 # Transcript Alignment Algorithm
 
 **Version:** 0.2.0  
-**License:** MIT
 
 A JavaScript library for aligning machine-generated transcripts (with timing data) with human-corrected transcripts (without timing data). This algorithm intelligently transfers word-level timing information from raw ASR output to corrected text while preserving paragraph structure and speaker labels.
 
