@@ -703,6 +703,4 @@ node test.js
 - [Hyperaudio Lite](https://github.com/hyperaudio/hyperaudio-lite) - Interactive transcript player
 - [Gentle](https://github.com/lowerquality/gentle) - Forced alignment using audio analysis
 
----
 
-**Made with ❤️ for better transcripts**
