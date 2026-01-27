@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcript Preprocessor</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .nav-back {
+            margin-bottom: 10px;
+        }
+
+        .nav-back a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-back a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            margin-top: 0;
+            color: #555;
+            font-size: 18px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 400px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+        
+        .header-removal {
+            background: #fff3cd;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #ffc107;
+        }
+        
+        .header-removal label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #856404;
+        }
+        
+        .header-removal input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .header-removal small {
+            display: block;
+            margin-top: 5px;
+            color: #856404;
+            font-size: 11px;
+        }
+        
+        .trint-option {
+            background: #d1ecf1;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #17a2b8;
+        }
+
+        .trint-option label {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            font-size: 13px;
+            color: #0c5460;
+            cursor: pointer;
+        }
+
+        .trint-option input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .trint-option small {
+            display: block;
+            margin-top: 5px;
+            margin-left: 24px;
+            color: #0c5460;
+            font-size: 11px;
+        }
+
+        .preprocess-options {
+            background: #e2e3e5;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #d6d8db;
+        }
+
+        .preprocess-options h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #383d41;
+        }
+
+        .preprocess-options label {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            color: #383d41;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .preprocess-options label:last-child {
+            margin-bottom: 0;
+        }
+
+        .preprocess-options input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background: #545b62;
+        }
+        
+        .output {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .paragraph {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid #007bff;
+            border-radius: 3px;
+        }
+        
+        .paragraph-number {
+            font-size: 11px;
+            color: #666;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stats {
+            background: #e7f3ff;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #004085;
+        }
+        
+        .stats-row {
+            margin: 5px 0;
+        }
+        
+        .sample-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .sample-buttons button {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #28a745;
+        }
+        
+        .sample-buttons button:hover {
+            background: #218838;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .panel-header h2 {
+            margin: 0;
+        }
+        
+        .copy-button {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        
+        .copy-button:hover {
+            background: #218838;
+        }
+        
+        .copy-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .copy-button svg {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .copy-feedback {
+            font-size: 12px;
+            color: #28a745;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-back"><a href="index.html">&larr; Back to Tools</a></div>
+    <h1>Transcript Preprocessor</h1>
+    <p style="color: #666;">Paste your transcript text. Apply preprocessing options and extract paragraphs.</p>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Input Text</h2>
+            <div class="sample-buttons">
+                <button onclick="loadSample('wrapped')">Load Wrapped Text Sample</button>
+                <button onclick="loadSample('withHeaders')">Load Text with Headers</button>
+                <button onclick="loadSample('trint')">Load Trint Format Sample</button>
+                <button onclick="clearInput()">Clear</button>
+            </div>
+            
+            <div class="trint-option">
+                <label>
+                    <input type="checkbox" id="trintFormat" />
+                    Trint formatted transcript
+                </label>
+                <small>Removes timecodes and formats speaker names (e.g., "[00:08:03] Cindy Weinstein And so..." becomes "Cindy Weinstein: And so...")</small>
+                
+                <div style="margin-top: 10px; padding-left: 24px;">
+                    <label style="font-weight: normal;">
+                        <input type="checkbox" id="carryForwardSpeaker" checked />
+                        Carry forward speaker name to paragraphs without a speaker
+                    </label>
+                </div>
+            </div>
+            
+            <div class="preprocess-options">
+                <h3>Preprocessing Options</h3>
+                <label>
+                    <input type="checkbox" id="removeTimecodes" />
+                    Remove timecodes (e.g., " 01:08:" or " 1:08:")
+                </label>
+                <label>
+                    <input type="checkbox" id="convertNewlines" />
+                    Convert literal \n\n to paragraph breaks
+                </label>
+                <label>
+                    <input type="checkbox" id="removeSpacesBeforePunctuation" />
+                    Remove spaces before punctuation (e.g., "hello ." → "hello.")
+                </label>
+                <label>
+                    <input type="checkbox" id="convertEscapedQuotes" />
+                    Convert \" to ' (escaped double quotes to single quotes)
+                </label>
+                <label>
+                    <input type="checkbox" id="ensureEllipsisSpaces" />
+                    Ensure space after ellipsis (...)
+                </label>
+                <label>
+                    <input type="checkbox" id="removeDoubleSpaces" />
+                    Remove double spaces
+                </label>
+            </div>
+
+            <div class="header-removal">
+                <label for="headerPrefix">Remove Page Headers (Optional)</label>
+                <input
+                    type="text"
+                    id="headerPrefix"
+                    placeholder="e.g., USHMM Archives, Page, Chapter"
+                />
+                <small>Enter text that page headers begin with. Leave empty to skip header removal.</small>
+            </div>
+            
+            <textarea id="inputText" placeholder="Paste your transcript here..."></textarea>
+            <div class="button-group">
+                <button onclick="extractParagraphs()">Extract Paragraphs</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Output</h2>
+                <button id="copyButton" class="copy-button" onclick="copyToClipboard()" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy
+                </button>
+            </div>
+            <div id="output" class="output">
+                <p style="color: #999; text-align: center; padding: 40px 20px;">
+                    Results will appear here...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample texts
+        const samples = {
+            wrapped: `I was born in a small town in 1928. My family was very hard working.
+We had six children and ran a small mill. We ground flour and buckwheat.
+We were not prosperous but comfortable.
+
+We went to school every day. In the morning it was public school.
+In the afternoon we attended religious school until almost late at night.
+The schools were separated between different groups.
+
+Life was simple but we knew what was happening in the world. My father
+subscribed to many newspapers. We would discuss current events at home.
+I remember when refugees came through our town with nothing.`,
+            
+            withHeaders: `USHMM Archives RG-50.030*0001  1
+
+I was born in a small town in 1928. My family was very hard working.
+We had six children and ran a small mill. We ground flour and buckwheat.
+We were not prosperous but comfortable.
+
+USHMM Archives RG-50.030*0001  2
+
+We went to school every day. In the morning it was public school.
+In the afternoon we attended religious school until almost late at night.
+The schools were separated between different groups.
+
+USHMM Archives RG-50.030*0001  3
+
+Life was simple but we knew what was happening in the world. My father
+subscribed to many newspapers. We would discuss current events at home.
+I remember when refugees came through our town with nothing.`,
+            
+            trint: `Interview with Community Leaders
+Project Documentation - Oral History Series
+Date: October 2025
+
+[00:08:03] Cindy Weinstein And so how soon afterwards did John Whitehead call you?  
+
+ 
+
+[00:08:08] Mary Berry Feels like January. I mean, really soon after he he was assembling the team of people to get involved. So, yes, it was actually, you know, soon after January.  
+
+ 
+
+[00:08:19] it was actually a very important moment for me personally.
+
+ 
+
+[00:08:24] Cindy Weinstein And did you have any doubts that maybe it was too soon that you weren't qualified?  
+
+ 
+
+[00:08:30] Mary Berry No, I didn't have any doubts about that because I knew the work was important and needed to be done.
+
+ 
+
+[00:08:38] and I was really committed to seeing it through to the end.`
+        };
+        
+        function loadSample(type) {
+            document.getElementById('inputText').value = samples[type];
+            if (type === 'withHeaders') {
+                document.getElementById('headerPrefix').value = 'USHMM Archives';
+            } else {
+                document.getElementById('headerPrefix').value = '';
+            }
+            if (type === 'trint') {
+                document.getElementById('trintFormat').checked = true;
+                document.getElementById('carryForwardSpeaker').checked = true;
+            } else {
+                document.getElementById('trintFormat').checked = false;
+                document.getElementById('carryForwardSpeaker').checked = true;
+            }
+        }
+        
+        function clearInput() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('headerPrefix').value = '';
+            document.getElementById('trintFormat').checked = false;
+            document.getElementById('carryForwardSpeaker').checked = true;
+            document.getElementById('removeTimecodes').checked = false;
+            document.getElementById('convertNewlines').checked = false;
+            document.getElementById('removeSpacesBeforePunctuation').checked = false;
+            document.getElementById('convertEscapedQuotes').checked = false;
+            document.getElementById('ensureEllipsisSpaces').checked = false;
+            document.getElementById('removeDoubleSpaces').checked = false;
+            document.getElementById('output').innerHTML = '<p style="color: #999; text-align: center; padding: 40px 20px;">Results will appear here...</p>';
+        }
+        
+        // Process Trint format: remove timecodes and add colons after speaker names
+        function processTrintFormat(text, carryForwardSpeaker = true) {
+            // Step 0: Remove title lines (can be multi-line) - skip until first timecode
+            const lines = text.split('\n');
+            let startIndex = 0;
+            
+            // Find the first line with a timecode - everything before is title/header
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                // Check if this line contains a timecode
+                if (line.match(/\[\d{2}:\d{2}:\d{2}\]/)) {
+                    startIndex = i;
+                    break;
+                }
+            }
+            
+            // Rejoin text starting from the first timecode
+            text = lines.slice(startIndex).join('\n');
+            
+            // Step 1: Remove timecodes like [00:08:03]
+            let processed = text.replace(/\[\d{2}:\d{2}:\d{2}\]\s*/g, '');
+            
+            // Step 2: Detect speaker names by finding repeated patterns at paragraph starts
+            // Split into paragraphs (separated by blank lines)
+            const paragraphs = processed.split(/\n\s*\n+/).map(p => p.trim()).filter(p => p);
+            
+            // First pass: collect potential speaker names (first 2-4 words of each paragraph)
+            const speakerCandidates = {};
+            const confirmedSpeakersFromPrevious = new Set(); // Track speakers we've seen
+            
+            paragraphs.forEach(para => {
+                // Skip paragraphs that already have speaker:content format (from Trint's formatting)
+                // This prevents detecting already-formatted names as candidates
+                if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}:\s+/.test(para)) {
+                    return; // Skip this paragraph in speaker detection
+                }
+                
+                // Try to extract first 2-4 words as potential speaker name
+                // We'll try different lengths and see which ones repeat
+                for (let wordCount = 2; wordCount <= 4; wordCount++) {
+                    const words = para.split(/\s+/);
+                    if (words.length > wordCount) {
+                        const potentialName = words.slice(0, wordCount).join(' ');
+                        const lastWord = words[wordCount - 1];
+                        const nextWord = words[wordCount]; // The word after the potential speaker name
+                        
+                        // Check if this looks like a name (starts with capital letters)
+                        // AND the last word doesn't end with punctuation
+                        if (/^[A-Z]/.test(potentialName) && !/[.,;:!?]$/.test(lastWord)) {
+                            // Additional validation: next word should start with capital letter
+                            // UNLESS this speaker name was already confirmed earlier
+                            const nextWordStartsWithCapital = /^[A-Z]/.test(nextWord);
+                            const alreadyConfirmed = confirmedSpeakersFromPrevious.has(potentialName);
+                            
+                            if (nextWordStartsWithCapital || alreadyConfirmed) {
+                                if (!speakerCandidates[potentialName]) {
+                                    speakerCandidates[potentialName] = 0;
+                                }
+                                speakerCandidates[potentialName]++;
+                                
+                                // If this appears multiple times with capital after, mark as confirmed
+                                if (nextWordStartsWithCapital && speakerCandidates[potentialName] >= 2) {
+                                    confirmedSpeakersFromPrevious.add(potentialName);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Find candidates that appear multiple times (these are likely speaker names)
+            const confirmedSpeakers = new Set();
+            for (const [name, count] of Object.entries(speakerCandidates)) {
+                if (count >= 2) {
+                    confirmedSpeakers.add(name);
+                }
+            }
+            
+            // Step 2.5: Refine speaker names by finding the most common base form
+            // This handles cases like "Amy Weinstein" (10x) vs "Amy Weinstein Yeah" (2x)
+            const speakerArray = Array.from(confirmedSpeakers);
+            const speakerGroups = new Map(); // Group speakers by common prefix
+            
+            // Build groups of speakers that share a common prefix
+            speakerArray.forEach(speaker => {
+                const words = speaker.split(/\s+/);
+                let grouped = false;
+                
+                // Try progressively shorter versions (down to 2 words minimum)
+                for (let len = 2; len < words.length; len++) {
+                    const prefix = words.slice(0, len).join(' ');
+                    
+                    // Check if this prefix exists as a confirmed speaker
+                    if (confirmedSpeakers.has(prefix)) {
+                        // Add this speaker to the prefix's group
+                        if (!speakerGroups.has(prefix)) {
+                            speakerGroups.set(prefix, []);
+                        }
+                        speakerGroups.get(prefix).push(speaker);
+                        grouped = true;
+                        break;
+                    }
+                    
+                    // Or check if any existing speakers start with this prefix
+                    const relatedSpeakers = speakerArray.filter(s => 
+                        s !== speaker && (s.startsWith(prefix + ' ') || s === prefix)
+                    );
+                    
+                    if (relatedSpeakers.length > 0) {
+                        if (!speakerGroups.has(prefix)) {
+                            speakerGroups.set(prefix, []);
+                        }
+                        speakerGroups.get(prefix).push(speaker);
+                        // Also add the related speakers if not already grouped
+                        relatedSpeakers.forEach(rs => {
+                            if (!speakerGroups.get(prefix).includes(rs)) {
+                                speakerGroups.get(prefix).push(rs);
+                            }
+                        });
+                        grouped = true;
+                        break;
+                    }
+                }
+                
+                // If not grouped with anything, keep as standalone
+                if (!grouped) {
+                    speakerGroups.set(speaker, [speaker]);
+                }
+            });
+            
+            // For each group, find the true speaker name by comparing frequencies
+            const finalSpeakers = new Set();
+            const processedVariations = new Set();
+            
+            speakerGroups.forEach((variations, baseCandidate) => {
+                // Skip if already processed as part of another group
+                if (processedVariations.has(baseCandidate)) return;
+                
+                // Get all variations including the base candidate
+                const allVariations = [baseCandidate, ...variations];
+                const uniqueVariations = [...new Set(allVariations)];
+                
+                // Find the shortest common prefix among all variations
+                let shortestLength = Math.min(...uniqueVariations.map(v => v.split(/\s+/).length));
+                let coreName = null;
+                
+                // Try each possible prefix length, starting from shortest
+                for (let len = shortestLength; len >= 2; len--) {
+                    const possibleCore = uniqueVariations[0].split(/\s+/).slice(0, len).join(' ');
+                    
+                    // Check if all variations start with this prefix
+                    const allMatch = uniqueVariations.every(v => v.startsWith(possibleCore));
+                    
+                    if (allMatch && speakerCandidates[possibleCore]) {
+                        // This is a valid core name - check if it's the most frequent
+                        const coreCount = speakerCandidates[possibleCore] || 0;
+                        const longerVariationsCounts = uniqueVariations
+                            .filter(v => v !== possibleCore && v.startsWith(possibleCore))
+                            .map(v => speakerCandidates[v] || 0);
+                        
+                        // If the core appears more frequently than extensions, it's the real name
+                        // Or if the core is much more common (appears at least as much as any extension)
+                        const maxExtensionCount = Math.max(0, ...longerVariationsCounts);
+                        if (coreCount >= maxExtensionCount) {
+                            coreName = possibleCore;
+                            break;
+                        }
+                    }
+                }
+                
+                // If no clear core found, use the most frequent variation
+                if (!coreName) {
+                    coreName = uniqueVariations.reduce((best, current) => {
+                        const bestCount = speakerCandidates[best] || 0;
+                        const currentCount = speakerCandidates[current] || 0;
+                        return currentCount > bestCount ? current : best;
+                    });
+                }
+                
+                finalSpeakers.add(coreName);
+                uniqueVariations.forEach(v => processedVariations.add(v));
+            });
+            
+            // Sort confirmed speakers by length (longest first) to avoid partial matches
+            const speakerList = Array.from(finalSpeakers).sort((a, b) => b.length - a.length);
+            
+            // Second pass: format paragraphs with speaker names
+            let lastSpeaker = null;
+            const formattedParagraphs = paragraphs.map(para => {
+                // Check if paragraph already has a speaker name with colon (from original Trint format)
+                // Pattern: "Name Name: content" or "Name Name Name: content"
+                const alreadyFormattedMatch = para.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}):\s+(.+)/);
+                if (alreadyFormattedMatch) {
+                    // Already has speaker:content format, just capitalize first word if needed
+                    const existingSpeaker = alreadyFormattedMatch[1];
+                    let content = alreadyFormattedMatch[2];
+                    if (content.length > 0 && content[0] === content[0].toLowerCase()) {
+                        content = content[0].toUpperCase() + content.substring(1);
+                    }
+                    lastSpeaker = existingSpeaker; // Update last speaker
+                    return `${existingSpeaker}: ${content}`;
+                }
+                
+                // Check if this paragraph starts with a confirmed speaker name
+                for (const speaker of speakerList) {
+                    if (para.startsWith(speaker + ' ')) {
+                        // Add colon after speaker name
+                        let content = para.substring(speaker.length + 1).trim();
+                        
+                        // Ensure first word after speaker name starts with capital letter
+                        if (content.length > 0 && content[0] === content[0].toLowerCase()) {
+                            content = content[0].toUpperCase() + content.substring(1);
+                        }
+                        
+                        lastSpeaker = speaker;
+                        return `${speaker}: ${content}`;
+                    }
+                }
+                
+                // If no speaker found and carryForwardSpeaker is enabled, use last speaker
+                if (carryForwardSpeaker && lastSpeaker) {
+                    // Ensure first word starts with capital letter
+                    let content = para;
+                    if (content.length > 0 && content[0] === content[0].toLowerCase()) {
+                        content = content[0].toUpperCase() + content.substring(1);
+                    }
+                    return `${lastSpeaker}: ${content}`;
+                }
+                
+                return para;
+            });
+            
+            return formattedParagraphs.join('\n\n');
+        }
+        
+        // Preprocessing: Apply text transformations
+        function applyPreprocessing(text, options) {
+            let processed = text;
+
+            // Convert literal \n\n to actual newlines (paragraph breaks)
+            if (options.convertNewlines) {
+                processed = processed.replace(/\\n\\n/g, '\n\n');
+                processed = processed.replace(/\\n/g, '\n');
+            }
+
+            // Remove timecodes like " 01:08:" or " 1:08:" or "01:08:" at start
+            if (options.removeTimecodes) {
+                // Match patterns like " 01:08:" or " 1:08:" or "01:08:15" etc.
+                processed = processed.replace(/\s*\d{1,2}:\d{2}(?::\d{2})?:?\s*/g, ' ');
+                // Clean up any double spaces created
+                processed = processed.replace(/  +/g, ' ');
+            }
+
+            // Remove spaces before punctuation
+            if (options.removeSpacesBeforePunctuation) {
+                processed = processed.replace(/\s+([.,;:!?])/g, '$1');
+            }
+
+            // Convert escaped double quotes to single quotes
+            if (options.convertEscapedQuotes) {
+                processed = processed.replace(/\\"/g, "'");
+            }
+
+            // Ensure space after ellipsis (...)
+            if (options.ensureEllipsisSpaces) {
+                // First normalize multiple dots to exactly three
+                processed = processed.replace(/\.{2,}/g, '...');
+                // Add space after ellipsis if there isn't one (but not at end of line or before punctuation)
+                processed = processed.replace(/\.{3}([^\s.,!?])/g, '... $1');
+            }
+
+            // Remove double spaces (should be last to clean up any created by other options)
+            if (options.removeDoubleSpaces) {
+                processed = processed.replace(/  +/g, ' ');
+            }
+
+            return processed;
+        }
+
+        // Preprocessing: Remove headers
+        function removeHeaders(text, headerPrefix) {
+            if (!headerPrefix || headerPrefix.trim() === '') {
+                return text;
+            }
+            
+            const lines = text.split('\n');
+            const result = [];
+            let i = 0;
+            
+            while (i < lines.length) {
+                const line = lines[i];
+                
+                // Check if this line starts with the header prefix
+                if (line.trim().startsWith(headerPrefix.trim())) {
+                    // Skip this line (the header)
+                    i++;
+                    
+                    // If the next line is blank, skip it too
+                    if (i < lines.length && lines[i].trim() === '') {
+                        i++;
+                    }
+                } else {
+                    // Keep this line
+                    result.push(line);
+                    i++;
+                }
+            }
+            
+            return result.join('\n');
+        }
+        
+        // Simple extraction function
+        function performExtraction(text) {
+            // Split by blank lines (one or more empty lines)
+            return text
+                .split(/\n\s*\n+/)
+                .map(para => para
+                    .replace(/\n/g, ' ')  // Replace single newlines with spaces
+                    .trim()
+                )
+                .filter(para => para.length > 0);
+        }
+        
+        // Store extracted paragraphs globally for clipboard access
+        let extractedParagraphs = [];
+        
+        function extractParagraphs() {
+            let text = document.getElementById('inputText').value;
+            const headerPrefix = document.getElementById('headerPrefix').value;
+            const isTrintFormat = document.getElementById('trintFormat').checked;
+
+            // Get preprocessing options
+            const preprocessOptions = {
+                removeTimecodes: document.getElementById('removeTimecodes').checked,
+                convertNewlines: document.getElementById('convertNewlines').checked,
+                removeSpacesBeforePunctuation: document.getElementById('removeSpacesBeforePunctuation').checked,
+                convertEscapedQuotes: document.getElementById('convertEscapedQuotes').checked,
+                ensureEllipsisSpaces: document.getElementById('ensureEllipsisSpaces').checked,
+                removeDoubleSpaces: document.getElementById('removeDoubleSpaces').checked
+            };
+
+            if (!text.trim()) {
+                alert('Please enter some text first');
+                return;
+            }
+
+            // Apply general preprocessing options first
+            text = applyPreprocessing(text, preprocessOptions);
+
+            // Preprocessing: convert Trint format
+            if (isTrintFormat) {
+                const carryForwardSpeaker = document.getElementById('carryForwardSpeaker').checked;
+                text = processTrintFormat(text, carryForwardSpeaker);
+            }
+
+            // Preprocessing: remove headers
+            let headersRemoved = 0;
+            if (headerPrefix && headerPrefix.trim() !== '') {
+                const beforeLines = text.split('\n').length;
+                text = removeHeaders(text, headerPrefix);
+                const afterLines = text.split('\n').length;
+                headersRemoved = beforeLines - afterLines;
+            }
+
+            const paragraphs = performExtraction(text);
+            extractedParagraphs = paragraphs; // Store for clipboard
+            
+            const outputDiv = document.getElementById('output');
+            const copyButton = document.getElementById('copyButton');
+            
+            // Enable copy button if we have paragraphs
+            copyButton.disabled = paragraphs.length === 0;
+            
+            let html = `
+                <div class="stats">
+                    <div class="stats-row"><strong>Paragraphs Found:</strong> ${paragraphs.length}</div>
+                    ${headersRemoved > 0 ? `<div class="stats-row"><strong>Lines Removed:</strong> ${headersRemoved} (headers + blank lines)</div>` : ''}
+                </div>
+            `;
+            
+            paragraphs.forEach((para, index) => {
+                html += `
+                    <div class="paragraph">
+                        <div class="paragraph-number">Paragraph ${index + 1}</div>
+                        ${para}
+                    </div>
+                `;
+            });
+            
+            outputDiv.innerHTML = html;
+        }
+        
+        async function copyToClipboard() {
+            if (extractedParagraphs.length === 0) {
+                return;
+            }
+            
+            // Join paragraphs with blank lines (two newlines)
+            const textToCopy = extractedParagraphs.join('\n\n');
+            
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                
+                // Show feedback
+                const copyButton = document.getElementById('copyButton');
+                const originalHTML = copyButton.innerHTML;
+                
+                copyButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Copied!
+                `;
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    copyButton.innerHTML = originalHTML;
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy to clipboard: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

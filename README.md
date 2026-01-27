@@ -1,6 +1,6 @@
 # Transcript Alignment Algorithm
 
-**Version:** 0.2.0  
+**Version:** 0.2.2  
 
 A JavaScript library for aligning machine-generated transcripts (with timing data) with human-corrected transcripts (without timing data). This algorithm intelligently transfers word-level timing information from raw ASR output to corrected text while preserving paragraph structure and speaker labels.
 
@@ -47,7 +47,7 @@ Machine Transcript          Corrected Transcript              Aligned Output
 ✅ **Paragraph Structure** - Preserves paragraph breaks and formatting  
 ✅ **Timing Transfer** - Borrowed timing for inserted words  
 ✅ **Overlap Prevention** - Distributes timing among consecutive inserted words  
-✅ **JSON-Based** - Works with standard JSON format (use `conversion.js` for HTML)  
+✅ **JSON-Based** - Works with standard JSON format (use `html-json-converter.js` for HTML)  
 ✅ **Language Agnostic** - No language-specific assumptions  
 ✅ **No Build Required** - Plain JavaScript, works in Node.js and browsers  
 ✅ **Well Tested** - Includes comprehensive test suite
@@ -56,16 +56,16 @@ Machine Transcript          Corrected Transcript              Aligned Output
 
 ### Direct Download
 
-Download `alignment.js` from the repository and include it in your project. No build step required!
+Download `word-alignment.js` from the repository and include it in your project. No build step required!
 
 ### Node.js
 ```javascript
-const { alignTranscripts } = require('./alignment.js');
+const { alignTranscripts } = require('./word-alignment.js');
 ```
 
 ### Browser
 ```html
-<script src="alignment.js"></script>
+<script src="word-alignment.js"></script>
 <script>
   // Functions are available globally
   const result = alignTranscripts(machineJSON, correctedText);
@@ -74,12 +74,12 @@ const { alignTranscripts } = require('./alignment.js');
 
 ### ES Modules
 ```javascript
-import { alignTranscripts } from './alignment.js';
+import { alignTranscripts } from './word-alignment.js';
 ```
 
 ## Quick Start
 ```javascript
-const { alignTranscripts } = require('./alignment.js');
+const { alignTranscripts } = require('./word-alignment.js');
 
 // Machine transcript from ASR (has timing, has errors)
 const machineTranscript = {
@@ -294,13 +294,11 @@ It can span multiple paragraphs.
 
 ## Testing (WIP)
 
-### Run Tests
-```bash
-# Run test suite
-node test.js
-```
+### Interactive Demo
 
-No build step or npm install required!
+Try the alignment algorithm in your browser using the [demo](demo/index.html):
+- **Pre-processor** - Clean up corrected transcripts before alignment
+- **Word Alignment** - Align transcripts and visualize results
 
 ### Test Coverage
 
@@ -319,7 +317,7 @@ The test suite includes:
 
 ### Create Your Own Tests
 ```javascript
-const { alignTranscripts } = require('./alignment.js');
+const { alignTranscripts } = require('./word-alignment.js');
 
 // Your test data
 const machine = { /* ... */ };
@@ -618,7 +616,19 @@ node test.js
 
 ## Changelog
 
-### v0.2.0 (Current)
+### v0.2.2 (Current)
+
+**Changed:**
+- Removed escaped newline preprocessing (moved to Transcript Preprocessor tool)
+- Improved banded alignment with typed arrays for memory efficiency
+- Increased bandwidth to 4000 for long transcripts
+
+### v0.2.1
+
+**Added:**
+- Preprocessing to convert escaped newlines (`\\n`) to actual newlines
+
+### v0.2.0
 
 **Fixed:**
 - Word matching now uses `normalizeWord()` instead of `toLowerCase()`
@@ -654,9 +664,9 @@ node test.js
 
 ## Related Projects
 
-- `conversion.js` - HTML/JSON format conversion utilities (companion library)
-- `hyperaudio` - Interactive transcript player
-- `gentle` - Forced alignment using audio analysis
+- `demo/html-json-converter.js` - HTML/JSON format conversion utilities (included in demo)
+- [Hyperaudio Lite](https://github.com/hyperaudio/hyperaudio-lite) - Interactive transcript player
+- [Gentle](https://github.com/lowerquality/gentle) - Forced alignment using audio analysis
 
 ---
 

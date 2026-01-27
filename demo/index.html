@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcript Alignment Tools</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 18px;
+        }
+
+        .tools {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.2s, transform 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .tool-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .tool-card h2 {
+            margin: 0 0 12px 0;
+            color: #007bff;
+            font-size: 20px;
+        }
+
+        .tool-card p {
+            margin: 0;
+            color: #555;
+            font-size: 15px;
+        }
+
+        .tool-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .workflow {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+        }
+
+        .workflow h3 {
+            margin: 0 0 16px 0;
+            color: #333;
+        }
+
+        .workflow ol {
+            margin: 0;
+            padding-left: 24px;
+        }
+
+        .workflow li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .library-info {
+            background: #e7f3ff;
+            border-radius: 8px;
+            padding: 20px 24px;
+            border-left: 4px solid #007bff;
+        }
+
+        .library-info h3 {
+            margin: 0 0 12px 0;
+            color: #004085;
+        }
+
+        .library-info p {
+            margin: 0;
+            color: #004085;
+        }
+
+        .library-info code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        footer {
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Transcript Alignment Tools</h1>
+    <p class="subtitle">Align machine-generated transcripts with human corrections to preserve word-level timing.</p>
+
+    <div class="tools">
+        <a href="pre-processor.html" class="tool-card">
+            <h2><span class="tool-number">1</span>Pre-processor</h2>
+            <p>Prepare your corrected transcript for alignment. Remove page headers, process Trint format, and extract clean paragraphs with speaker labels.</p>
+        </a>
+
+        <a href="word-alignment-demo.html" class="tool-card">
+            <h2><span class="tool-number">2</span>Word Alignment</h2>
+            <p>Align your machine transcript JSON with the corrected text. View results as JSON, interactive transcript, or visual diff.</p>
+        </a>
+    </div>
+
+    <div class="workflow">
+        <h3>Typical Workflow</h3>
+        <ol>
+            <li><strong>Get machine transcript</strong> - Export word-level JSON from your ASR service (timestamps + words)</li>
+            <li><strong>Correct the text</strong> - Human editor fixes transcription errors</li>
+            <li><strong>Pre-process</strong> - Use the Pre-processor to clean up the corrected text</li>
+            <li><strong>Align</strong> - Use Word Alignment to transfer timing from machine transcript to corrected text</li>
+            <li><strong>Export</strong> - Copy the aligned JSON for use in your application</li>
+        </ol>
+    </div>
+
+    <div class="library-info">
+        <h3>Using the Library</h3>
+        <p>The alignment algorithm is available as a standalone JavaScript library: <code>word-alignment.js</code></p>
+        <p style="margin-top: 12px;">See the <a href="https://github.com/anthropics/ts-aligner">README</a> for API documentation and integration examples.</p>
+    </div>
+
+    <footer>
+        <p>Built with <a href="../word-alignment.js">word-alignment.js</a></p>
+    </footer>
+</body>
+</html>
