@@ -152,7 +152,7 @@
     <div class="tools">
         <a href="pre-processor.html" class="tool-card">
             <h2><span class="tool-number">1</span>Pre-processor</h2>
-            <p>Prepare your corrected transcript for alignment. Remove page headers, process Trint format, and extract clean paragraphs with speaker labels.</p>
+            <p>Prepare your corrected transcript for alignment. Remove page headers, process various formats, and extract clean paragraphs with speaker labels.</p>
         </a>
 
         <a href="word-alignment-demo.html" class="tool-card">
@@ -165,9 +165,10 @@
         <h3>Typical Workflow</h3>
         <ol>
             <li><strong>Get machine transcript</strong> - Export word-level JSON from your ASR service (timestamps + words)</li>
-            <li><strong>Correct the text</strong> - Human editor fixes transcription errors</li>
-            <li><strong>Pre-process</strong> - Use the Pre-processor to clean up the corrected text</li>
+            <li><strong>Get corrected text</strong> - With fixed transcription errors</li>
+            <li><strong>Pre-process</strong> - If required, use the Pre-processor to clean up the corrected text</li>
             <li><strong>Align</strong> - Use Word Alignment to transfer timing from machine transcript to corrected text</li>
+            <li><strong>Test</strong> - Test word timings using our Interactive Transcript tool</li>
             <li><strong>Export</strong> - Copy the aligned JSON for use in your application</li>
         </ol>
     </div>
