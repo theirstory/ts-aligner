@@ -446,7 +446,38 @@ The core of the algorithm is the **Levenshtein distance** calculation using dyna
 
 3. **Backtrack**: Trace back through the table to find which operations were used.
 
-**Time Complexity:** O(m × n) where m, n are word counts  
+#### DP Matrix Example
+
+For source `["I", "think", "we"]` and target `["I", "believe", "we", "go"]`:
+
+```
+                    TARGET (corrected transcript)
+                    ε       I       believe   we      go
+              ┌─────────────────────────────────────────────┐
+           ε  │   [0]─────→ 1 ─────→ 2 ─────→ 3 ─────→ 4    │
+              │    │ ╲                                      │
+SOURCE     I  │    1   [0]────→ 1 ─────→ 2 ─────→ 3        │
+(machine)     │         │ ╲                                 │
+         think│    2    1   [1]────→ 2 ─────→ 3            │
+              │              │ ╲                            │
+           we │    3    2    2   [1]────→[2]               │
+              │                    ╲      ↗                 │
+              │                     match  insert           │
+              └─────────────────────────────────────────────┘
+
+Legend:
+  [n] = cells on optimal path        ─→ = insert (cost +1)
+  ╲   = match (cost +0)              │  = delete (cost +1)
+      or substitute (cost +1)
+```
+
+**Reading the path** (backtrack from bottom-right to top-left):
+- `[2]→[1]`: insert "go" (no source word)
+- `[1]→[1]`: match "we"→"we" (diagonal, same cost)
+- `[1]→[0]`: substitute "think"→"believe" (diagonal, cost +1)
+- `[0]→[0]`: match "I"→"I" (diagonal, same cost)
+
+**Time Complexity:** O(m × n) where m, n are word counts
 **Space Complexity:** O(m × n) for DP table
 
 ### Word Matching
