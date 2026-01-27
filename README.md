@@ -1,4 +1,4 @@
-# Transcript Alignment Algorithm
+# TheirStory Transcript Alignment Algorithm
 
 **Version:** 0.2.2  
 
