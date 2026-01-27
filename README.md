@@ -1,11 +1,14 @@
 # TheirStory Transcript Alignment Algorithm
 
-**Version:** 0.2.2  
+**Version:** 0.2.2
 
 A JavaScript library for aligning machine-generated transcripts (with timing data) with human-corrected transcripts (without timing data). This algorithm intelligently transfers word-level timing information from raw ASR output to corrected text while preserving paragraph structure and speaker labels.
 
+**[Try the Live Demo](https://theirstory.github.io/ts-aligner/demo/index.html)**
+
 ## Table of Contents
 
+- [Demo](#demo)
 - [Overview](#overview)
 - [Features](#features)
 - [Installation](#installation)
@@ -292,13 +295,14 @@ It can span multiple paragraphs.
 - Speaker labels up to 6 words (prevents false positives)
 - Language agnostic (no case requirements)
 
-## Testing (WIP)
+## Demo
 
-### Interactive Demo
+Try the alignment algorithm in your browser: **[Live Demo](https://theirstory.github.io/ts-aligner/demo/index.html)**
 
-Try the alignment algorithm in your browser using the [demo](demo/index.html):
 - **Pre-processor** - Clean up corrected transcripts before alignment
 - **Word Alignment** - Align transcripts and visualize results
+
+## Testing (WIP)
 
 ### Test Coverage
 
