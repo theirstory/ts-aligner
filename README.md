@@ -34,7 +34,7 @@ When you transcribe audio or video with automatic speech recognition (ASR), you 
 ```
 Machine Transcript          Corrected Transcript              Aligned Output
 ------------------          --------------------              --------------
-[0.0-0.5] "I"          +    "I believe we should go"     →   [0.0-0.5] "I"
+[0.0-0.5] "I"          +    "I believe we should go"     →    [0.0-0.5] "I"
 [0.5-1.0] "think"                                             [0.5-1.0] "believe"
 [1.0-1.5] "we"                                                [1.0-1.5] "we"
 [1.5-2.0] "should"                                            [1.5-2.0] "should"
