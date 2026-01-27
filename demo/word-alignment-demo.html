@@ -869,29 +869,38 @@
         document.body.removeChild(textarea);
       }
 
-      function loadExample() {
-        const example = {
-          words: [
-            { start: 52.89, end: 52.98, text: "I" },
-            { start: 52.98, end: 53.13, text: "think" },
-            { start: 53.13, end: 53.31, text: "that's" },
-            { start: 53.31, end: 53.58, text: "unfortunately" },
-            { start: 53.58, end: 53.64, text: "at" },
-            { start: 53.64, end: 53.73, text: "the" },
-            { start: 53.73, end: 53.97, text: "minute" },
-            { start: 53.97, end: 54.12, text: "people" },
-            { start: 54.12, end: 54.21, text: "are" },
-            { start: 54.21, end: 54.57, text: "aware." }
-          ],
-          paragraphs: [
-            { start: 52.89, end: 54.57, speaker: "Narrator" }
-          ]
-        };
+      async function loadExample() {
+        try {
+          // Show loading state
+          document.getElementById('machineJson').value = 'Loading...';
+          document.getElementById('correctedText').value = 'Loading...';
 
-        document.getElementById('machineJson').value = JSON.stringify(example,
-  null, 2);
-        document.getElementById('correctedText').value = `Narrator: So I think
-  that unfortunately the minute that people are aware.`;
+          // Fetch both files in parallel
+          const [jsonResponse, textResponse] = await Promise.all([
+            fetch('demo-data/cat_allman_fossda_machine.json'),
+            fetch('demo-data/cat_allman_fossda_corrected.txt')
+          ]);
+
+          if (!jsonResponse.ok || !textResponse.ok) {
+            throw new Error('Failed to load example files');
+          }
+
+          const machineJson = await jsonResponse.json();
+          const correctedText = await textResponse.text();
+
+          // Populate the input fields
+          document.getElementById('machineJson').value = JSON.stringify(machineJson, null, 2);
+          document.getElementById('correctedText').value = correctedText;
+
+          // Set the video URL for interactive preview
+          document.getElementById('videoUrl').value = 'https://lab.theirstory.io/test-media/Cat_Allman_FOSSDA.mp4';
+
+        } catch (error) {
+          console.error('Error loading example:', error);
+          document.getElementById('machineJson').value = '';
+          document.getElementById('correctedText').value = '';
+          alert('Failed to load example data. Please check that the demo-data folder exists.');
+        }
       }
 
       function clearAll() {
