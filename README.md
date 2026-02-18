@@ -4,6 +4,8 @@
 
 A JavaScript library for aligning machine-generated transcripts (with timing data) with human-corrected transcripts (without timing data). This algorithm intelligently transfers word-level timing information from raw ASR output to corrected text while preserving paragraph structure and speaker labels.
 
+This library can be used one either on the back-end or the front-end.
+
 **[Try the Live Demo](https://theirstory.github.io/ts-aligner/demo/index.html)**
 
 ## Table of Contents
