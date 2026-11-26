@@ -1,3 +1,4 @@
+console.log('word-alignment.js version 59 loaded');
 /**
  * ============================================================================
  * TRANSCRIPT ALIGNMENT ALGORITHM
@@ -46,8 +47,8 @@
  * - Optional speaker labels (bracketed or unbracketed)
  * - Colon (:) used as separator for unbracketed speakers
  * - Names can contain periods and dashes (Dr. Johnson, Smith-Jones)
- * - Speaker text must start with capital letter
- * 
+ * - Unbracketed labels must look like a name or repeat in the transcript
+ *
  * ALGORITHM FLOW:
  * 
  * 1. EXTRACT phase:
@@ -215,17 +216,18 @@ function extractWordsFromJSON(jsonData) {
 function extractWordsFromPlainText(plainText) {
   // Split by one or more newlines to get individual paragraphs
   const paragraphs = plainText.split(/\n+/);
-  
+  const repeatedLabels = findRepeatedSpeakerLabels(plainText);
+
   // Accumulator for all words across all paragraphs
   let allWords = [];
-  
+
   // Process each paragraph
   paragraphs.forEach(paragraph => {
     const trimmedParagraph = paragraph.trim();
-    
+
     if (trimmedParagraph.length > 0) {
       // Use the validation function to check for speaker and get remaining text
-      const validation = isValidSpeakerPattern(trimmedParagraph);
+      const validation = isValidSpeakerPattern(trimmedParagraph, repeatedLabels);
       
       let paragraphText = trimmedParagraph;
       
@@ -246,76 +248,155 @@ function extractWordsFromPlainText(plainText) {
 }
 
 /**
+ * HELPER FUNCTION: parseColonLabel
+ *
+ * PURPOSE: Split "Label: text" into its label and text, without deciding yet
+ *          whether the label is really a speaker name
+ *
+ * OUTPUTS:
+ *   - {label, remainingText}, or null if the text doesn't start with a short label
+ *
+ * RULES:
+ *   - The label is the text before the first colon, at most 6 words
+ *   - A colon followed directly by a digit is not a separator, so times
+ *     like "At 5:30 we left." are never split
+ *   - There must be text after the colon
+ */
+function parseColonLabel(text) {
+  const match = text.match(/^([^:\n]{1,100}?):(?!\d)\s*(.+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const label = match[1].trim();
+  const remainingText = match[2];
+
+  if (!label || label.split(/\s+/).length > 6 || remainingText.trim().length === 0) {
+    return null;
+  }
+
+  return { label, remainingText };
+}
+
+/**
+ * HELPER FUNCTION: looksLikeSpeakerName
+ *
+ * PURPOSE: Tell a name-like label ("Alice", "Dr. Johnson", "SPEAKER_S1", "Q")
+ *          apart from the start of a sentence ("I wondered", "My answer was simple")
+ *
+ * RULES:
+ *   - No word starts with a lowercase letter (scripts without letter case pass)
+ *   - No sentence punctuation: , ; ? ! or quotes
+ */
+function looksLikeSpeakerName(label) {
+  if (/[,;?!"“”]/.test(label)) {
+    return false;
+  }
+  return label.split(/\s+/).every(word => !/^\p{Ll}/u.test(word));
+}
+
+/**
+ * HELPER FUNCTION: findRepeatedSpeakerLabels
+ *
+ * PURPOSE: Find colon labels that start more than one paragraph
+ *
+ * WHY: Real speakers recur throughout a transcript, so a repeated label is
+ *      accepted even when it doesn't look like a name (e.g. "Maria de la Cruz",
+ *      "note"). A sentence like "I wondered: ..." almost never repeats exactly.
+ *
+ * OUTPUTS:
+ *   - Set of labels that appear two or more times
+ */
+function findRepeatedSpeakerLabels(plainText) {
+  const labelCounts = new Map();
+
+  plainText.split(/\n+/).forEach(paragraph => {
+    const colonLabel = parseColonLabel(paragraph.trim());
+    if (colonLabel) {
+      labelCounts.set(colonLabel.label, (labelCounts.get(colonLabel.label) || 0) + 1);
+    }
+  });
+
+  const repeatedLabels = new Set();
+  labelCounts.forEach((count, label) => {
+    if (count > 1) {
+      repeatedLabels.add(label);
+    }
+  });
+  return repeatedLabels;
+}
+
+/**
  * HELPER FUNCTION: isValidSpeakerPattern
- * 
- * PURPOSE: Validate that a potential speaker label follows the correct pattern
- * 
- * WHY: We need to distinguish actual speaker labels from regular text.
- *      This is a permissive, language-agnostic approach.
- *      Valid patterns:
- *      - [anything]: text (bracketed, optionally with colon)
- *      - [anything] text (bracketed without colon)
- *      - anything: text (unbracketed with colon)
- * 
+ *
+ * PURPOSE: Decide whether a paragraph starts with a speaker label
+ *
+ * WHY: We need to distinguish actual speaker labels from regular text, so that
+ *      sentences containing a colon don't lose their opening words to a fake speaker.
+ *
  * INPUTS:
  *   - text: The paragraph text to check
- * 
+ *   - repeatedLabels: Set from findRepeatedSpeakerLabels() for the whole transcript
+ *
  * OUTPUTS:
  *   - Object with {isValid: boolean, speaker: string|null, remainingText: string}
- * 
+ *
  * VALIDATION RULES:
- *   1. Bracketed: [text] followed by any content
- *   2. Unbracketed: text followed by : and any content
- *   3. No case requirements - language agnostic
- *   4. Speaker can be any text (names, notes, labels, etc.)
- * 
+ *   1. Bracketed: [text] followed by any content - always a speaker
+ *   2. Unbracketed: "label: text" (see parseColonLabel) where the label either
+ *      looks like a name (see looksLikeSpeakerName) or repeats in the transcript
+ *
  * EXAMPLES:
  *   "[Alice]: Hello there" → {isValid: true, speaker: "Alice"}
  *   "[note] something" → {isValid: true, speaker: "note"}
  *   "Alice: so do I." → {isValid: true, speaker: "Alice"}
- *   "note: remember this" → {isValid: true, speaker: "note"}
  *   "John: --I forgot" → {isValid: true, speaker: "John"}
  *   "Jenny: 2024." → {isValid: true, speaker: "Jenny"}
  *   "Q: Tell me more." → {isValid: true, speaker: "Q"}
  *   "Dr. Johnson: Good morning" → {isValid: true, speaker: "Dr. Johnson"}
+ *   "I wondered: what's out there?" → {isValid: false}
+ *   "At 5:30 we left." → {isValid: false}
+ *   "note: remember this" → {isValid: false}, unless "note" repeats
  */
-function isValidSpeakerPattern(text) {
+function isValidSpeakerPattern(text, repeatedLabels = new Set()) {
   // Try bracketed pattern first: [anything] optional(:) optional(whitespace) content
   const bracketedMatch = text.match(/^\[([^\]]+)\]\s*:?\s*(.+)$/);
-  
+
   if (bracketedMatch) {
     const potentialSpeaker = bracketedMatch[1];
     const remainingText = bracketedMatch[2];
-    
+
     return {
       isValid: true,
       speaker: potentialSpeaker,
       remainingText: remainingText
     };
   }
-  
-  // Try unbracketed pattern: text followed by : and content
-  // Speaker label can be 1-6 words to avoid matching things like full sentences with colons
-  // This is a balance between permissiveness and avoiding false positives
-  const unbracketedMatch = text.match(/^([^:\n]{1,100}?):\s*(.+)$/);
-  
-  if (unbracketedMatch) {
-    const potentialSpeaker = unbracketedMatch[1].trim();
-    const remainingText = unbracketedMatch[2];
-    
-    // Verify speaker label isn't too long (avoid matching long sentences)
-    const wordCount = potentialSpeaker.split(/\s+/).length;
-    if (wordCount <= 6 && remainingText.trim().length > 0) {
-      return {
-        isValid: true,
-        speaker: potentialSpeaker,
-        remainingText: remainingText
-      };
-    }
+
+  const colonLabel = parseColonLabel(text);
+  if (colonLabel && (looksLikeSpeakerName(colonLabel.label) || repeatedLabels.has(colonLabel.label))) {
+    return {
+      isValid: true,
+      speaker: colonLabel.label,
+      remainingText: colonLabel.remainingText
+    };
   }
-  
+
   // No valid pattern found
   return { isValid: false, speaker: null, remainingText: text };
+}
+
+// Speaker given to annotation paragraphs, so they aren't credited to a narrator
+const ANNOTATION_SPEAKER = 'Note';
+
+/**
+ * HELPER FUNCTION: isAnnotation
+ *
+ * PURPOSE: Detect a paragraph that is only a bracketed transcriber note,
+ *          e.g. "[INTERRUPTION]", "[REDACTED]", "[INAUDIBLE]", "[END OF TAPE 1]"
+ */
+function isAnnotation(text) {
+  return /^\[[^\]]+\]$/.test(text);
 }
 
 /**
@@ -333,8 +414,8 @@ function isValidSpeakerPattern(text) {
  *     * Bracketed: "[Name]: text" or "[Name] text"
  *     * Unbracketed: "Name: text" (colon required)
  *   - Names can contain periods and dashes (Dr. Johnson, Smith-Jones)
- *   - Speaker validation: text after separator must start with capital letter
- * 
+ *   - Speaker validation: see isValidSpeakerPattern
+ *
  * INPUTS:
  *   - plainText: The corrected transcript as a plain text string
  * 
@@ -344,7 +425,10 @@ function isValidSpeakerPattern(text) {
  *     * startWordIndex: Global word index where this paragraph starts
  *     * endWordIndex: Global word index where this paragraph ends
  *     * wordCount: Number of words in this paragraph
- *     * speaker: Speaker name (null if no valid speaker label)
+ *     * speaker: Speaker name; a paragraph without a label inherits the previous
+ *       paragraph's speaker (null only before the first label). Annotation
+ *       paragraphs get ANNOTATION_SPEAKER and don't change the current speaker.
+ *     * isAnnotation: Whether the paragraph is a transcriber note (see isAnnotation)
  * 
  * EXAMPLE INPUT:
  *   "[Alice]: Hello there. How are you?\nBob: I'm doing well, thanks!"
@@ -380,33 +464,38 @@ function isValidSpeakerPattern(text) {
 function detectParagraphs(plainText) {
   // Split by one or more newlines (paragraph separator in plain text)
   const paragraphs = plainText.split(/\n+/);
-  
+  const repeatedLabels = findRepeatedSpeakerLabels(plainText);
+
   // Array to store metadata about each paragraph
   const paragraphMap = [];
   
   // Track the cumulative word index across all paragraphs
   let wordIndex = 0;
-  
+
+  // A paragraph without a speaker label continues the previous speaker's turn
+  let currentSpeaker = null;
+
   // Process each paragraph
   paragraphs.forEach((paragraph, paragraphIndex) => {
     const trimmedParagraph = paragraph.trim();
     
     // Skip empty paragraphs
     if (trimmedParagraph.length > 0) {
+      const isAnnotationParagraph = isAnnotation(trimmedParagraph);
+
       // Check if paragraph has a valid speaker pattern
-      const validation = isValidSpeakerPattern(trimmedParagraph);
-      
-      let speaker = null;
+      const validation = isValidSpeakerPattern(trimmedParagraph, repeatedLabels);
+
       let paragraphText = trimmedParagraph;
-      
+
       if (validation.isValid) {
-        speaker = validation.speaker;
+        currentSpeaker = validation.speaker;
         paragraphText = validation.remainingText;
       }
-      
+
       // Split paragraph text into words (by whitespace)
       const paragraphWords = paragraphText.split(/\s+/).filter(w => w.length > 0);
-      
+
       // Only add to map if paragraph has actual words
       if (paragraphWords.length > 0) {
         paragraphMap.push({
@@ -414,7 +503,8 @@ function detectParagraphs(plainText) {
           startWordIndex: wordIndex,
           endWordIndex: wordIndex + paragraphWords.length - 1,
           wordCount: paragraphWords.length,
-          speaker: speaker
+          speaker: isAnnotationParagraph ? ANNOTATION_SPEAKER : currentSpeaker,
+          isAnnotation: isAnnotationParagraph
         });
         
         // Move word index forward for next paragraph
@@ -482,6 +572,11 @@ function alignWords(sourceWords, targetWords) {
 /**
  * Standard DP alignment with full matrix
  * Uses typed arrays for memory efficiency
+ *
+ * Substitution costs 2 (equivalent to a delete + insert) while insert and delete
+ * each cost 1. This ensures the algorithm prefers to preserve exact matches even
+ * when it means inserting/deleting an extra word, rather than substituting through
+ * a match and assigning the wrong timing to a correctly-matched word.
  */
 function alignWordsStandard(sourceWords, targetWords) {
   const m = sourceWords.length;
@@ -509,8 +604,9 @@ function alignWordsStandard(sourceWords, targetWords) {
         dp[idx(i, j)] = dp[idx(i-1, j-1)];
       } else {
         // Choose minimum cost operation
+        // Substitution costs 2 (delete + insert) to prefer preserving exact matches
         dp[idx(i, j)] = Math.min(
-          dp[idx(i-1, j-1)] + 1,  // substitute
+          dp[idx(i-1, j-1)] + 2,  // substitute (costs 2)
           dp[idx(i-1, j)] + 1,    // delete
           dp[idx(i, j-1)] + 1     // insert
         );
@@ -535,7 +631,7 @@ function alignWordsStandard(sourceWords, targetWords) {
       if (normalizeWord(sourceWords[i-1]) === normalizeWord(targetWords[j-1])) {
         alignment.push({ type: 'match', sourceIdx: i-1, targetIdx: j-1 });
         i--; j--;
-      } else if (current === dp[idx(i-1, j-1)] + 1) {
+      } else if (current === dp[idx(i-1, j-1)] + 2) {
         alignment.push({ type: 'substitute', sourceIdx: i-1, targetIdx: j-1 });
         i--; j--;
       } else if (current === dp[idx(i-1, j)] + 1) {
@@ -555,6 +651,8 @@ function alignWordsStandard(sourceWords, targetWords) {
 /**
  * Banded alignment for very large inputs
  * Uses typed arrays for memory efficiency - critical for large transcripts
+ *
+ * Substitution costs 2 (same rationale as alignWordsStandard).
  *
  * Memory: O(m * bandwidth) with ~5 bytes per cell (vs ~50+ bytes with Maps)
  * Time: O(m * bandwidth)
@@ -638,7 +736,7 @@ function alignWordsBanded(sourceWords, targetWords, bandwidth) {
         const isMatch = normalizeWord(sourceWords[i-1]) === normalizeWord(targetWords[j-1]);
 
         const diagCost = getCost(i-1, j-1);
-        const matchSubCost = diagCost + (isMatch ? 0 : 1);
+        const matchSubCost = diagCost + (isMatch ? 0 : 2);  // substitute costs 2
         const delCost = getCost(i-1, j) + 1;
         const insCost = getCost(i, j-1) + 1;
 
@@ -780,8 +878,217 @@ function alignWordsGreedy(sourceWords, targetWords) {
 }
 
 /**
+ * FUNCTION: assignSpeakersFromDiarization
+ *
+ * PURPOSE: Assign speaker labels to output words using machine transcript diarization data
+ *
+ * WHY: When the corrected transcript has no speaker labels, the machine transcript's
+ *      paragraph/speaker segments (from diarization) can provide speaker information.
+ *      Each output word already has timing from the alignment process, so we can look up
+ *      which machine speaker segment that timing falls within.
+ *
+ * INPUTS:
+ *   - outputWords: Array of {word, start, end, targetIdx} from alignment Phase 1
+ *   - machineParagraphs: Array of {speaker, start, end} from machine transcript JSON
+ *
+ * OUTPUTS:
+ *   - The same outputWords array, with a `speaker` field added to each word
+ *   - Words that fall in gaps between segments get the nearest segment's speaker
+ */
+function assignSpeakersFromDiarization(outputWords, machineParagraphs) {
+  if (!machineParagraphs || machineParagraphs.length === 0) {
+    return outputWords;
+  }
+
+  const debugWords = ['Renato', 'La', 'mia', 'De'];
+  outputWords.forEach(word => {
+    let bestSpeaker = null;
+    let bestDistance = Infinity;
+    const isDebug = debugWords.includes(word.word);
+
+    for (let i = 0; i < machineParagraphs.length; i++) {
+      const para = machineParagraphs[i];
+
+      // Word falls within this segment's time range (inclusive start, exclusive end)
+      if (word.start >= para.start && word.start < para.end) {
+        if (isDebug) console.log('  ASSIGN "' + word.word + '" t=' + word.start + ' MATCHED para[' + i + '] ' + para.speaker + ' (' + para.start + '-' + para.end + ')');
+        bestSpeaker = para.speaker || null;
+        break;
+      }
+
+      // Track nearest segment for words that fall in gaps
+      const distToStart = Math.abs(word.start - para.start);
+      const distToEnd = Math.abs(word.start - para.end);
+      const minDist = Math.min(distToStart, distToEnd);
+
+      if (minDist < bestDistance) {
+        bestDistance = minDist;
+        if (isDebug) console.log('  ASSIGN "' + word.word + '" t=' + word.start + ' GAP nearest para[' + i + '] ' + para.speaker + ' (' + para.start + '-' + para.end + ') dist=' + minDist.toFixed(4));
+        bestSpeaker = para.speaker || null;
+      }
+    }
+
+    word.speaker = bestSpeaker;
+  });
+
+  return outputWords;
+}
+
+/**
+ * FUNCTION: buildParagraphsFromDiarization
+ *
+ * PURPOSE: Create paragraph breaks based on speaker changes at sentence boundaries
+ *
+ * WHY: Inserted words (words the ASR missed that the human corrector added) get
+ *      interpolated timings that can land them in the wrong speaker's segment.
+ *      This causes spurious mid-sentence speaker changes. Real speaker changes
+ *      almost always occur at sentence boundaries. So we only break paragraphs
+ *      when the speaker changes AND the previous word ended a sentence.
+ *
+ *      When the corrected text lacks punctuation, sentence boundaries can't be
+ *      detected. The fallbackWordCount option provides a minimum-run fallback:
+ *      if a new speaker persists for N+ consecutive words without a sentence
+ *      boundary being found, commit to the break anyway.
+ *
+ * INPUTS:
+ *   - outputWords: Array of {word, start, end, targetIdx, speaker} (already speaker-assigned)
+ *   - fallbackWordCount: If set (e.g. 5), allow speaker changes after N consecutive
+ *     words from a new speaker even without a sentence boundary. 0 or unset disables.
+ *
+ * OUTPUTS:
+ *   - Array of paragraph objects: [{start, end, speaker}, ...]
+ */
+function buildParagraphsFromDiarization(outputWords, fallbackWordCount = 0) {
+  if (outputWords.length === 0) {
+    return [];
+  }
+
+  // Check if a word ends a sentence
+  const endsSentence = (word) => /[.!?]$/.test(word);
+
+  const paragraphs = [];
+  let currentSpeaker = outputWords[0].speaker;
+  let paragraphStart = outputWords[0].start;
+  let paragraphEnd = outputWords[0].end;
+  // Track how many consecutive words we've seen from a different speaker
+  let pendingSpeaker = null;
+  let pendingCount = 0;
+  let pendingStartIdx = 0;
+
+  for (let i = 1; i < outputWords.length; i++) {
+    const word = outputWords[i];
+    const prevWord = outputWords[i - 1];
+
+    if (word.speaker !== currentSpeaker) {
+      // Track the pending speaker change
+      if (pendingSpeaker !== word.speaker) {
+        pendingSpeaker = word.speaker;
+        pendingCount = 1;
+        pendingStartIdx = i;
+      } else {
+        pendingCount++;
+      }
+
+      // Commit the speaker change if we're at a sentence boundary
+      // OR if the fallback threshold is met
+      const atSentenceBoundary = endsSentence(outputWords[pendingStartIdx - 1].word);
+      const fallbackMet = fallbackWordCount > 0 && pendingCount >= fallbackWordCount;
+
+      if (atSentenceBoundary || fallbackMet) {
+        // Close current paragraph at the word before the pending change started
+        const paragraphObj = {
+          start: paragraphStart,
+          end: outputWords[pendingStartIdx - 1].end
+        };
+        if (currentSpeaker) {
+          paragraphObj.speaker = currentSpeaker;
+        }
+        paragraphs.push(paragraphObj);
+
+        // Start new paragraph from where the pending speaker began
+        currentSpeaker = pendingSpeaker;
+        paragraphStart = outputWords[pendingStartIdx].start;
+        pendingSpeaker = null;
+        pendingCount = 0;
+      }
+    } else {
+      // Same speaker as current — reset any pending change
+      pendingSpeaker = null;
+      pendingCount = 0;
+    }
+
+    paragraphEnd = word.end;
+  }
+
+  // Close final paragraph
+  const lastParagraph = {
+    start: paragraphStart,
+    end: paragraphEnd
+  };
+  if (currentSpeaker) {
+    lastParagraph.speaker = currentSpeaker;
+  }
+  paragraphs.push(lastParagraph);
+
+  return paragraphs;
+}
+
+/**
+ * FUNCTION: placeAnnotationsInGaps
+ *
+ * PURPOSE: Time annotation words (e.g. "[INTERRUPTION]") to the gap between the
+ *          spoken words around them, which is where the interruption happened
+ *
+ * WHY: Annotations are never spoken, so alignment can only borrow timing from a
+ *      neighbouring word, which makes them overlap that word. When there is no gap
+ *      (or the annotation is at the very start or end), the borrowed timing is kept.
+ *
+ * INPUTS:
+ *   - outputWords: Array of {word, start, end, targetIdx} from alignment Phase 1
+ *   - paragraphMap: Output of detectParagraphs()
+ */
+function placeAnnotationsInGaps(outputWords, paragraphMap) {
+  const annotationWordIndexes = new Set();
+  paragraphMap.forEach(paragraph => {
+    if (paragraph.isAnnotation) {
+      for (let i = paragraph.startWordIndex; i <= paragraph.endWordIndex; i++) {
+        annotationWordIndexes.add(i);
+      }
+    }
+  });
+
+  const isAnnotationWord = word => annotationWordIndexes.has(word.targetIdx);
+
+  let groupStart = 0;
+  while (groupStart < outputWords.length) {
+    if (!isAnnotationWord(outputWords[groupStart])) {
+      groupStart++;
+      continue;
+    }
+
+    // Consecutive annotation words (one or more annotation paragraphs) share one gap
+    let groupEnd = groupStart;
+    while (groupEnd + 1 < outputWords.length && isAnnotationWord(outputWords[groupEnd + 1])) {
+      groupEnd++;
+    }
+
+    const previousWord = outputWords[groupStart - 1];
+    const nextWord = outputWords[groupEnd + 1];
+
+    if (previousWord && nextWord && nextWord.start > previousWord.end) {
+      for (let i = groupStart; i <= groupEnd; i++) {
+        outputWords[i].start = previousWord.end;
+        outputWords[i].end = nextWord.start;
+      }
+    }
+
+    groupStart = groupEnd + 1;
+  }
+}
+
+/**
  * FUNCTION: generateAlignedJSON
- * 
+ *
  * PURPOSE: Generate JSON output with aligned timings and paragraph structure
  * 
  * WHY: This is the final step that combines:
@@ -796,28 +1103,34 @@ function alignWordsGreedy(sourceWords, targetWords) {
  *   - targetWords: Words from corrected transcript (need timings)
  *   - timings: Timing data from machine transcript (in seconds)
  *   - plainText: Corrected transcript as plain text (for paragraph structure)
- * 
+ *   - options: Optional settings object
+ *     - useDiarization: boolean (default false) - Use machine transcript speaker segments
+ *     - machineParagraphs: Array of {speaker, start, end} from machine transcript
+ *
  * OUTPUTS:
  *   - JSON object with structure:
  *     {
  *       words: [{start, end, text}, ...],
  *       paragraphs: [{speaker, start, end}, ...]
  *     }
- * 
+ *
  * PROCESS:
  *   PHASE 1: Build output array with words and timings
  *     - For each aligned word:
  *       * If MATCH or SUBSTITUTE: Use timing from source word
  *       * If INSERT: Interpolate timing (use next/previous timing)
  *       * If DELETE: Skip (word doesn't appear in output)
- *   
+ *
  *   PHASE 2: Detect paragraph structure from plain text
- *   
+ *     (or from diarization if useDiarization is true)
+ *
  *   PHASE 3: Generate JSON with proper paragraph structure
  */
-function generateAlignedJSON(alignment, sourceWords, targetWords, timings, plainText) {
+function generateAlignedJSON(alignment, sourceWords, targetWords, timings, plainText, options = {}) {
+  const useDiarization = options.useDiarization || false;
+
   // ===== PHASE 1: BUILD OUTPUT ARRAY WITH WORDS AND TIMINGS =====
-  
+
   // Array to store final words with their timing information
   // Each element: {word, start, end, targetIdx}
   const outputWords = [];
@@ -853,7 +1166,7 @@ function generateAlignedJSON(alignment, sourceWords, targetWords, timings, plain
           break;  // Found it, stop searching
         }
       }
-      
+
       // Use the next timing if found, otherwise fall back to the last timing
       // This means inserted words will "borrow" timing from adjacent words
       const timing = nextTiming || lastTiming;
@@ -886,77 +1199,105 @@ function generateAlignedJSON(alignment, sourceWords, targetWords, timings, plain
   // ===== PHASE 2: DETECT PARAGRAPH STRUCTURE =====
   // Analyze the plain text to find paragraph boundaries and speaker labels
   const paragraphMap = detectParagraphs(plainText);
-  
+
+  // Annotations sharing one gap get identical timings, which Phase 2.5 then splits evenly
+  placeAnnotationsInGaps(outputWords, paragraphMap);
+
   // ===== PHASE 2.5: FIX OVERLAPPING TIMESTAMPS =====
   // When multiple inserted words borrow the same timestamp, distribute the time among them
   for (let i = 0; i < outputWords.length; i++) {
     const currentWord = outputWords[i];
-    
+
     // Find all consecutive words with the same timestamp
     const sameTimingGroup = [currentWord];
     let j = i + 1;
-    
-    while (j < outputWords.length && 
-           outputWords[j].start === currentWord.start && 
+
+    while (j < outputWords.length &&
+           outputWords[j].start === currentWord.start &&
            outputWords[j].end === currentWord.end) {
       sameTimingGroup.push(outputWords[j]);
       j++;
     }
-    
+
     // If we have multiple words with the same timing, redistribute
     if (sameTimingGroup.length > 1) {
       const groupStart = currentWord.start;
       const groupEnd = currentWord.end;
       const totalDuration = groupEnd - groupStart;
       const wordDuration = totalDuration / sameTimingGroup.length;
-      
+
       // Redistribute timing across the group
       sameTimingGroup.forEach((word, index) => {
         word.start = groupStart + (wordDuration * index);
         word.end = groupStart + (wordDuration * (index + 1));
       });
-      
+
       // Skip the words we just processed
       i = j - 1;
     }
   }
-  
+
   // ===== PHASE 3: BUILD JSON OUTPUT =====
-  
+
   // Convert words to JSON format
   const jsonWords = outputWords.map((item, index) => ({
     start: item.start,       // Already in seconds
     end: item.end,           // Already in seconds
     text: item.word
   }));
-  
+
   // Build paragraphs array
   const jsonParagraphs = [];
-  
-  if (paragraphMap.length > 0) {
-    // MULTI-PARAGRAPH CASE: Create paragraph objects based on detected structure
+
+  // Determine whether to use machine diarization for paragraph/speaker structure
+  const machineParagraphs = options.machineParagraphs || [];
+
+  // Check if corrected text already has speaker labels
+  const correctedTextHasSpeakers = paragraphMap.some(p => p.speaker !== null && !p.isAnnotation);
+
+  if (useDiarization && machineParagraphs.length > 0 && !correctedTextHasSpeakers) {
+    // DIARIZATION MODE: Use machine transcript speaker segments
+    // Assign speakers to each output word based on their timing
+    assignSpeakersFromDiarization(outputWords, machineParagraphs);
+
+    // DEBUG: log words at speaker boundaries
+    outputWords.forEach((w, i) => {
+      if (i === 0 || w.speaker !== outputWords[i-1].speaker) {
+        const prev = i > 0 ? outputWords[i-1] : null;
+        if (prev) console.log('  END: "' + prev.word + '" t=' + prev.start.toFixed(2) + ' -> ' + prev.speaker);
+        console.log('  START: "' + w.word + '" t=' + w.start.toFixed(2) + ' -> ' + w.speaker);
+      }
+    });
+
+    // Build paragraphs from speaker changes in the diarized words
+    const fallbackWordCount = options.fallbackWordCount || 0;
+    const diarizedParagraphs = buildParagraphsFromDiarization(outputWords, fallbackWordCount);
+    diarizedParagraphs.forEach(p => jsonParagraphs.push(p));
+
+  } else if (paragraphMap.length > 0) {
+    // CORRECTED TEXT MODE: Create paragraph objects based on detected structure
     paragraphMap.forEach(paragraph => {
       // Find words in this paragraph
       const paragraphWords = outputWords.filter(item =>
         item.targetIdx >= paragraph.startWordIndex &&
         item.targetIdx <= paragraph.endWordIndex
       );
-      
+
       if (paragraphWords.length > 0) {
         // Get start time from first word, end time from last word
         const firstWord = paragraphWords[0];
         const lastWord = paragraphWords[paragraphWords.length - 1];
-        
+
         const paragraphObj = {
           start: firstWord.start,  // In seconds
           end: lastWord.end        // In seconds
         };
-        
+
         // Add speaker if present (without brackets or punctuation)
         if (paragraph.speaker) {
           paragraphObj.speaker = paragraph.speaker;
         }
-        
+
         jsonParagraphs.push(paragraphObj);
       }
     });
@@ -965,18 +1306,18 @@ function generateAlignedJSON(alignment, sourceWords, targetWords, timings, plain
     if (outputWords.length > 0) {
       const firstWord = outputWords[0];
       const lastWord = outputWords[outputWords.length - 1];
-      
+
       jsonParagraphs.push({
         start: firstWord.start,
         end: lastWord.end
       });
     }
   }
-  
+
   // Create transcript field - all words as one string without speaker names
   // Convert double quotes to single quotes for better compatibility
   const transcript = jsonWords.map(word => word.text).join(' ').replace(/"/g, "'");
-  
+
   return {
     words: jsonWords,
     paragraphs: jsonParagraphs,
@@ -1003,45 +1344,56 @@ function generateAlignedJSON(alignment, sourceWords, targetWords, timings, plain
  *     Format: {words: [{start, end, text}, ...], paragraphs: [...]}
  *   - correctedText: Plain text of corrected transcript
  *     Format: "[Speaker]: text\nSpeaker: more text"
- * 
+ *   - options: Optional settings object
+ *     - useDiarization: boolean (default false) - When true, uses speaker segments
+ *       from machineTranscript.paragraphs to assign speakers to the output.
+ *       Only takes effect when the corrected text has no speaker labels.
+ *
  * OUTPUTS:
  *   - JSON object with corrected words and aligned timings
  *     Format: {words: [{start, end, text}, ...], paragraphs: [...]}
- * 
+ *
  * EXAMPLE USAGE:
  *   const machineJSON = {
  *     words: [{start: 4.76, end: 5.28, text: "Testing"}, ...],
- *     paragraphs: [{speaker: "Alice", start: 4.76, end: 10.0}]
+ *     paragraphs: [{speaker: "SPEAKER_S1", start: 4.76, end: 10.0}]
  *   };
- *   const correctedText = "[Alice]: Testing the production version...";
- *   const alignedJSON = alignTranscripts(machineJSON, correctedText);
- * 
+ *   const correctedText = "Testing the production version...";
+ *   const alignedJSON = alignTranscripts(machineJSON, correctedText, { useDiarization: true });
+ *
  * ALGORITHM STEPS:
- *   1. Preprocess corrected text to handle escaped newlines
- *   2. Extract words and timings from machine JSON
- *   3. Extract words from corrected plain text
- *   4. Align the two word sequences using edit distance
- *   5. Generate aligned JSON output with timing and structure
+ *   1. Extract words and timings from machine JSON
+ *   2. Extract words from corrected plain text
+ *   3. Align the two word sequences using edit distance
+ *   4. Generate aligned JSON output with timing and structure
  */
-function alignTranscripts(machineTranscript, correctedText) {
+function alignTranscripts(machineTranscript, correctedText, options = {}) {
   // Step 1: Extract words and timings from machine JSON
   const { words: sourceWords, timings } = extractWordsFromJSON(machineTranscript);
-  
+
   // Step 2: Extract words from corrected text (without speaker labels)
   const targetWords = extractWordsFromPlainText(correctedText);
-  
+
   // Step 3: Align the two word sequences
   const alignment = alignWords(sourceWords, targetWords);
-  
+
   // Step 4: Generate aligned JSON output
+  // Pass machine paragraphs (diarization data) through options for generateAlignedJSON
+  const generateOptions = {
+    useDiarization: options.useDiarization || false,
+    machineParagraphs: (machineTranscript && machineTranscript.paragraphs) || [],
+    fallbackWordCount: options.fallbackWordCount || 0
+  };
+
   const alignedJSON = generateAlignedJSON(
     alignment,
     sourceWords,
     targetWords,
     timings,
-    correctedText
+    correctedText,
+    generateOptions
   );
-  
+
   return alignedJSON;
 }
 
@@ -1061,6 +1413,9 @@ if (typeof module !== 'undefined' && module.exports) {
     detectParagraphs,
     alignWords,
     generateAlignedJSON,
+    // Export diarization helpers
+    assignSpeakersFromDiarization,
+    buildParagraphsFromDiarization,
     // Export helpers
     stripPunctuation,
     normalizeWord,
