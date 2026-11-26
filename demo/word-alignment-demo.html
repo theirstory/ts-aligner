@@ -496,21 +496,28 @@
       }
 
       function convertVTTToSpeakerText(vtt) {
-        const lines = vtt.split('\n');
+        // Read whole cues: a cue's text can run over several lines, and only the
+        // first usually carries the <v Speaker> tag.
+        const blocks = vtt.replace(/^﻿/, '').replace(/\r\n?/g, '\n').split(/\n{2,}/);
         const segments = [];
+        let lastSpeaker = '';
 
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
+        for (const block of blocks) {
+          const lines = block.split('\n').map(l => l.trim());
+          const timingIndex = lines.findIndex(l => l.includes('-->'));
+          if (timingIndex === -1) continue; // WEBVTT header, NOTE, STYLE or REGION block
 
-          // Look for lines with speaker voice tags: <v SPEAKER_XX>text
-          const voiceMatch = line.match(/^<v\s+([^>]+)>\s*(.*)$/);
-          if (voiceMatch) {
-            const speaker = voiceMatch[1].trim();
-            const text = voiceMatch[2].trim();
-            if (text) {
-              segments.push({ speaker, text });
-            }
-          }
+          const cueText = lines.slice(timingIndex + 1).filter(Boolean).join(' ');
+          const voiceMatch = cueText.match(/<v(?:\.[^\s>]+)?\s+([^>]+)>/);
+          const speaker = voiceMatch ? voiceMatch[1].trim() : lastSpeaker;
+          const text = cueText
+            .replace(/<[^>]+>/g, '') // voice, class, italics and timestamp tags
+            .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (!text) continue;
+          if (speaker) lastSpeaker = speaker;
+          segments.push({ speaker, text });
         }
 
         // Merge consecutive segments from the same speaker
@@ -524,7 +531,7 @@
           }
         }
 
-        return merged.map(s => '[' + s.speaker + '] ' + s.text).join('\n\n');
+        return merged.map(s => (s.speaker ? '[' + s.speaker + '] ' : '') + s.text).join('\n\n');
       }
 
       function performAlignment() {
